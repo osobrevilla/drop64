@@ -2,15 +2,16 @@
   "manifest_version": 2,
   "name": "Drop64",
   "description": "Drag and drop your files JPG, PNG, GIF, SVG, etc. on Drop64 and get basecode 64 ready to use on your website..",
-  "version": "0.1",
+  "version": "0.85",
   "app": {
     "background": {
       "scripts": ["src/background.js"]
-    },
-    "permissions": [
-      "clipboardWrite", // for copy and cut
-      "clipboardRead", // for paste
-    ]
+    }
   },
+  "permissions": [
+    "clipboardWrite",
+    "clipboardRead",
+    "notifications"
+  ],
   "icons": { "16": "drop64-16.png", "128": "drop64-128.png" }
 }
