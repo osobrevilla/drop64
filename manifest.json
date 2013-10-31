@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Drop 64",
   "description": "Drag and drop your files JPG, PNG, GIF, SVG, etc. on Drop64 and get basecode 64 ready to use on your website..",
-  "version": "0.851",
+  "version": "0.9",
   "author": "Oscar Sobrevilla",
   "app": {
     "short_name": "drop64",
