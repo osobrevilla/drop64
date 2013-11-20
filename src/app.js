@@ -47,7 +47,10 @@
         var p;
         target = typeof target === 'object' ?
             target : dom.query(target)[0];
-        this.options = {};
+        var events = ['dragenter', 'dragover', 'dragend', 'drop', 'dragleave'];
+        this.options = {
+            maxSize: 1024
+        };
         for (p in options)
             this.options[p] = options[p];
         this.el = dom.create('div');
@@ -64,20 +67,66 @@
             e.preventDefault();
             this.clear();
         }.bind(this));
-        this.fileList = new Drop64.FileList(this.options.rules);
+        this.fileList = new Drop64.FileList();
+        this.dom.xpander = dom.create('div');
+        this.dom.xpander.classList.add('drop64-catcher');
         this.dom.content.appendChild(this.fileList.el);
         this.dom.content.appendChild(this.dom.btnClear);
+        this.dom.content.appendChild(this.dom.xpander);
         this.dom.main.appendChild(this.dom.content);
         this.el.appendChild(this.dom.main);
         target.appendChild(this.el);
+         for (p in events)
+            this.el.addEventListener(events[p], this, false);
     };
 
-    Drop64.prototype = {
+    extend(Drop64.prototype, {
+        
         constructor: Drop64,
+
         clear: function () {
             return this.fileList.clear();
+        },
+        handleEvent: function (e) {
+            
+            switch (e.type) {
+                case 'dragenter':
+                    this.el.classList.add('drop64-files-over');
+                    break;
+                case 'dragover':
+                    e.preventDefault();
+                    break;
+                case 'dragleave':
+                    if (this.dom.xpander === e.srcElement)
+                        this.el.classList.remove('drop64-files-over');
+                    break;
+                case 'drop':
+                    e.stopPropagation(); // Stops some browsers from redirecting.
+                    e.preventDefault();
+                    this.el.classList.remove('drop64-files-over');
+                    this._drop(e);
+                    break;
+            }
+        },
+
+        _isFileValid: function(file){
+            return Drop64.accepts.indexOf(file.type) > -1 && file.size / 1024 < this.options.maxSize;
+        },
+        
+        addFile: function(file){
+            this.fileList.add(file);
+            file.convert();
+        },
+           
+        _drop: function (e) {
+            e.dataTransfer.effectAllowed = "copyMove";
+            var i, files = e.dataTransfer.files;
+            [].forEach.call(files, function (file, i) {
+                if (this._isFileValid(file))
+                    this.addFile(new Drop64.File(file));                    
+            }.bind(this));
         }
-    };
+    });
 
     Drop64.media = [
         ['b64', 'html', 'css'],
@@ -111,58 +160,18 @@
 
     Drop64.id = 0;
 
-    Drop64.FileList = function (options) {
-        this.options = {
-            maxSize: 1024
-        };
-        var events = ['dragenter', 'dragover', 'dragend', 'drop', 'dragleave'];
-        for (p in options)
-            this.options[p] = options[p];
-        this.files = [];
+    Drop64.FileList = function () {
         this.el = dom.create('ul');
         this.el.classList.add('drop64-files');
-        for (p in events)
-            this.el.addEventListener(events[p], this, false);
+        this.files = [];
     };
 
-    Drop64.FileList.prototype = {
+    extend(Drop64.FileList.prototype, {
 
-        constructor: Drop64.FileList,
 
-        handleEvent: function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            switch (e.type) {
-            case 'dragenter':
-                this.el.classList.add('drop64-files-over');
-                break;
-            case 'dragleave':
-            case 'dragend':
-                this.el.classList.remove('drop64-files-over');
-                break;
-            case 'drop':
-                this.el.classList.remove('drop64-files-over');
-                this._drop(e);
-                break;
-            }
-        },
-
-        _isFileValid: function(file){
-            return Drop64.accepts.indexOf(file.type) > -1 && file.size / 1024 < this.options.maxSize;
-        },
-
-        _drop: function (e) {
-            var i, files = e.dataTransfer.files;
-            [].forEach.call(files, function (file, i) {
-                if (this._isFileValid(file))
-                    this.addFile(new Drop64.File(file));
-            }.bind(this));
-        },
-
-        addFile: function (file) {
-            this.files.push(file);
+        add: function (file) {
             this.el.appendChild(file.el);
-            file.convert();
+            this.files.push(file);
         },
 
         clear: function () {
@@ -189,7 +198,7 @@
                 this.files[i].remove();
             this.files = [];
         }
-    };    
+    });    
 
     Drop64.CopyBar = function (file) {
         var i, btn;
@@ -257,7 +266,7 @@
             
             copyToClipboard(data);
             
-            chrome && chrome.notifications && chrome.notifications.create && 
+            typeof chrome && chrome.notifications && chrome.notifications.create && 
                 chrome.notifications.create("id" + Drop64.id++, {
                 type: 'basic',
                 title: 'Drop64',
